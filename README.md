@@ -2,6 +2,19 @@
 
 A **free, private document scanner with OCR**. Photograph a page with your phone, or upload images or PDFs. It finds the page automatically, straightens and cleans it, reads the text, and gives you editable text plus a **searchable PDF**. There are no subscriptions or per-page fees, and your documents never leave your own computer or server.
 
+## 📱 Android app (APK)
+
+**Download:** open the [latest release](../../releases/latest) on your phone and tap **`OCR-Scanner.apk`**. If Android asks, allow *Install unknown apps* for your browser or Files app.
+
+- **Scan document** opens Google's on-device AI document scanner. It finds the page edges, crops, flattens and cleans the page automatically. You can scan many pages, retake pages, or import from the gallery.
+- The text is then read **on your phone** by ML Kit's on-device text recognition. It works offline and nothing is uploaded. Languages: English and other Latin-script languages, plus Hindi/Devanagari.
+- Words the AI is unsure about are listed so you can check them. You can edit the text, then **copy, share, save as .txt**, or **save a searchable PDF**.
+- Needs Android 8.0+. The automatic page scanner needs Google Play services, which almost all phones have. Without it you can still use *Open images from gallery*.
+
+Every push to `main` that changes `android/` builds a new signed APK with GitHub Actions (`.github/workflows/android.yml`) and publishes it as a release. Each new APK installs as an update over the previous one. The source is in `android/`. To build it yourself, run `cd android && ./gradlew assembleRelease` with the Android SDK installed.
+
+> The signing key in `android/keystore/` is public, which is fine for personal use. Before publishing the app on the Play Store, create your own key and pass it through the `OCR_KEYSTORE*` environment variables (repository secrets).
+
 ## What it does
 
 | Step | How |
