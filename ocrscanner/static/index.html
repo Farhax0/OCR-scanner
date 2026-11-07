@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free OCR Scanner</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5d6673; --line: #dde1e6;
+    --accent: #2457d6; --accent-ink: #ffffff; --good: #1f8a4c; --warn: #b26b00; --bad: #c0352b;
+    --mark: rgba(255, 170, 0, .35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --card: #1a1e24; --text: #e8ebef; --muted: #9aa4b1; --line: #2c323a;
+      --accent: #6d95ff; --accent-ink: #0d1117; --good: #4fc27f; --warn: #f0a83a; --bad: #ff7a6e;
+      --mark: rgba(255, 170, 0, .3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  #drop { border: 2px dashed var(--line); border-radius: 12px; padding: 28px 16px; text-align: center; transition: border-color .15s; }
+  #drop.over { border-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
+  button, .btn { appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 10px 16px; border-radius: 8px; font: inherit; cursor: pointer; text-decoration: none; display: inline-block; }
+  .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: progress; }
+  select, label { font: inherit; color: var(--text); }
+  select { padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); }
+  .opts { margin-top: 14px; color: var(--muted); font-size: .95rem; }
+  #files { margin-top: 10px; color: var(--muted); font-size: .9rem; }
+  #status { margin: 16px 0; color: var(--muted); min-height: 1.5em; }
+  .page { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .page { grid-template-columns: 1fr; } }
+  .imgwrap { position: relative; }
+  .imgwrap img { width: 100%; display: block; border-radius: 8px; border: 1px solid var(--line); }
+  .box { position: absolute; background: var(--mark); outline: 1px solid var(--warn); border-radius: 2px; }
+  textarea { width: 100%; min-height: 420px; resize: vertical; font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; font-size: .9rem; }
+  .pill { padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  .g-excellent { color: var(--good); border-color: var(--good); }
+  .g-good { color: var(--good); border-color: var(--good); }
+  .g-retake { color: var(--bad); border-color: var(--bad); }
+  .warn { color: var(--warn); font-size: .92rem; margin: 4px 0; }
+  .review { font-size: .9rem; color: var(--muted); }
+  .review b { color: var(--warn); }
+  #actions { display: none; margin-top: 16px; }
+  footer { margin-top: 32px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Free OCR Scanner</h1>
+  <p class="sub">Photograph or upload a document. The page is found and straightened automatically, then the text is read. It all runs on this server, free and private.</p>
+
+  <div class="card">
+    <div id="drop">
+      <div class="row">
+        <label class="btn primary" for="camera">📷 Take photo</label>
+        <input id="camera" type="file" accept="image/*" capture="environment" hidden multiple>
+        <label class="btn" for="upload">Upload images / PDF</label>
+        <input id="upload" type="file" accept="image/*,application/pdf" hidden multiple>
+      </div>
+      <p style="margin:10px 0 0;color:var(--muted)">…or drop files here. Several photos become pages of one document.</p>
+      <div id="files"></div>
+    </div>
+    <div class="opts row">
+      <label>Language
+        <select id="lang">
+          <option value="eng">English</option>
+          <option value="hin">Hindi</option>
+          <option value="eng+hin">English + Hindi</option>
+          <option value="urd">Urdu</option>
+          <option value="ara">Arabic</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="spa">Spanish</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="detect" checked> Auto-detect page</label>
+      <label><input type="checkbox" id="fast"> Fast mode</label>
+      <button class="primary" id="go" disabled>Scan</button>
+    </div>
+  </div>
+
+  <div id="status" role="status"></div>
+  <div id="actions" class="row">
+    <button id="copy">Copy all text</button>
+    <a class="btn" id="dltxt" href="#">Download .txt</a>
+    <a class="btn primary" id="dlpdf" href="#">Download searchable PDF</a>
+  </div>
+  <div id="pages"></div>
+
+  <footer>Highlighted words are ones the engine is not sure about. Check them before you rely on the text.</footer>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let chosen = [];
+
+function setFiles(list) {
+  chosen = Array.from(list);
+  $("files").textContent = chosen.length ? chosen.map(f => f.name).join(", ") : "";
+  $("go").disabled = !chosen.length;
+}
+$("camera").onchange = (e) => setFiles([...chosen, ...e.target.files]);
+$("upload").onchange = (e) => setFiles([...chosen, ...e.target.files]);
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setFiles([...chosen, ...e.dataTransfer.files]));
+
+function el(tag, attrs = {}, text) {
+  const n = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v));
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function renderPage(p, i) {
+  const wrap = el("div", { class: "page card" });
+  const left = el("div");
+  const iw = el("div", { class: "imgwrap" });
+  const img = el("img", { src: p.preview, alt: `Scanned page ${i + 1}` });
+  iw.appendChild(img);
+  const [W, H] = p.size;
+  for (const w of p.needs_review) {
+    const [x, y, bw, bh] = w.box;
+    const b = el("div", { class: "box", title: `${w.text} (${w.confidence}%)` });
+    b.style.left = (x / W * 100) + "%"; b.style.top = (y / H * 100) + "%";
+    b.style.width = (bw / W * 100) + "%"; b.style.height = (bh / H * 100) + "%";
+    iw.appendChild(b);
+  }
+  left.appendChild(iw);
+
+  const right = el("div");
+  const meta = el("div", { class: "meta" });
+  const grade = p.quality.grade;
+  meta.appendChild(el("span", { class: "pill g-" + grade.split(" ")[0] }, `Page ${i + 1}: ${grade}`));
+  meta.appendChild(el("span", { class: "pill" }, `Confidence ${p.confidence}%`));
+  meta.appendChild(el("span", { class: "pill" }, p.document_found ? "Page auto-detected" : "Used full image"));
+  if (p.rotation) meta.appendChild(el("span", { class: "pill" }, `Rotated ${p.rotation}°`));
+  meta.appendChild(el("span", { class: "pill" }, `${p.seconds}s`));
+  right.appendChild(meta);
+  for (const w of p.quality.warnings) right.appendChild(el("div", { class: "warn" }, "⚠ " + w));
+  if (p.needs_review.length) {
+    const r = el("div", { class: "review" });
+    r.appendChild(document.createTextNode("Please check: "));
+    p.needs_review.slice(0, 30).forEach((w, k) => {
+      if (k) r.appendChild(document.createTextNode(", "));
+      r.appendChild(el("b", {}, w.text));
+    });
+    right.appendChild(r);
+  }
+  const ta = el("textarea", { "aria-label": `Text of page ${i + 1}`, spellcheck: "true" });
+  ta.value = p.text;
+  right.appendChild(ta);
+  wrap.append(left, right);
+  return wrap;
+}
+
+$("go").onclick = async () => {
+  const fd = new FormData();
+  chosen.forEach(f => fd.append("files", f));
+  fd.append("lang", $("lang").value);
+  fd.append("detect", $("detect").checked);
+  fd.append("fast", $("fast").checked);
+  $("go").disabled = true;
+  $("pages").innerHTML = "";
+  $("actions").style.display = "none";
+  const t0 = Date.now();
+  const tick = setInterval(() => { $("status").textContent = `Scanning ${chosen.length} file(s)… ${Math.round((Date.now() - t0) / 1000)}s`; }, 500);
+  try {
+    const r = await fetch("/api/scan", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    $("status").textContent = `Done: ${data.pages.length} page(s), overall confidence ${data.confidence}%.`;
+    data.pages.forEach((p, i) => $("pages").appendChild(renderPage(p, i)));
+    $("dltxt").href = `/api/result/${data.id}.txt`;
+    $("dlpdf").href = `/api/result/${data.id}.pdf`;
+    $("actions").style.display = "flex";
+  } catch (e) {
+    $("status").textContent = "Error: " + e.message;
+  } finally {
+    clearInterval(tick);
+    $("go").disabled = !chosen.length;
+  }
+};
+$("copy").onclick = async () => {
+  const text = [...document.querySelectorAll("textarea")].map(t => t.value).join("\n\n");
+  await navigator.clipboard.writeText(text);
+  $("copy").textContent = "Copied!";
+  setTimeout(() => $("copy").textContent = "Copy all text", 1500);
+};
+</script>
+</body>
+</html>
