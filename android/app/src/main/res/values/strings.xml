@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">OCR Scanner</string>
+    <string name="subtitle">Free AI document scanner. The page is detected, cropped and straightened automatically, then the text is read on your phone. Nothing is uploaded.</string>
+    <string name="scan">Scan document</string>
+    <string name="pick">Open images from gallery</string>
+    <string name="script_latin">English and Latin languages</string>
+    <string name="script_devanagari">Hindi / Devanagari</string>
+    <string name="text_hint">Recognised text appears here. You can edit it.</string>
+    <string name="copy">Copy</string>
+    <string name="share">Share</string>
+    <string name="save_pdf">Save PDF</string>
+    <string name="save_txt">Save text</string>
+</resources>

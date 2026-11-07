@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.OCRScanner" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#8CA9FF</item>
+        <item name="colorOnPrimary">#0D1117</item>
+    </style>
+</resources>

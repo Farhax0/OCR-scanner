@@ -1,0 +1,51 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build signed APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../OCR-Scanner.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OCR-Scanner-apk
+          path: OCR-Scanner.apk
+
+      - name: Publish release (main branch only)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-v1.0.${{ github.run_number }}
+          name: OCR Scanner for Android v1.0.${{ github.run_number }}
+          make_latest: "true"
+          files: OCR-Scanner.apk
+          body: |
+            **Download `OCR-Scanner.apk` below and open it on your Android phone** (Android 8.0+).
+            If asked, allow "Install unknown apps" for your browser or Files app.
+
+            - Tap **Scan document**: the page is detected, cropped and straightened automatically.
+            - Text is recognised on the phone (works offline, nothing is uploaded).
+            - Copy, share, or save the text and a searchable PDF.
